@@ -70,6 +70,7 @@ static void run(const regex& re, FILE *fin, FILE *fout) {
         }
       } else {
         strcpy(textbufp, linebuf);
+        textbufp += strlen(linebuf);
       }
     }
   }
