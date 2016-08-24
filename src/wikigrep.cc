@@ -1,11 +1,20 @@
 // wikigrep.cc
 // like 'grep' but search Wikipedia articles.
-// g++ -Wall -Werror --std=c++11 -Wpedantic src/wikigrep.cc -o wikigrep
+// g++ -O3 -Wall -Werror --std=c++11 -Wpedantic src/wikigrep.cc -o wikigrep
 // time ./wikigrep "Google" summaries/filtered-articles.xml out.xml
 // You can use enwiki-latest-pages-articles.xml
 // instead of filtered-articles.xml if you'd like.
 // filtered-articles.xml is just a smaller file, so would probably run
 // faster.
+
+/*
+g++ -O3 -Wall -Werror --std=c++11 -Wpedantic src/wikigrep.cc -o wikigrep && time ./wikigrep "\{\{Infobox company" summaries/filtered-articles.xml summaries/grep-companies.xml
+
+Finished in:
+real	56m55.061s
+user	54m53.611s
+sys	0m46.797s
+*/
 #include <regex>
 #include <string.h>
 #include <stdio.h>
@@ -32,7 +41,8 @@ static bool is_wikispecial(const char *title) {
   return str_starts_with(title, "Wikipedia:") ||
          str_starts_with(title, "Portal:") ||
          str_starts_with(title, "Category:") ||
-         str_starts_with(title, "Template:");
+         str_starts_with(title, "Template:") ||
+         str_starts_with(title, "Draft:");
 }
 
 static void run(const regex& re, FILE *fin, FILE *fout) {
@@ -65,7 +75,7 @@ static void run(const regex& re, FILE *fin, FILE *fout) {
         if (regex_search(textbuf, re)) {
           fprintf(stderr, "match %10d: title = %s\n", nmatch, titlebuf);
           fprintf(fout, "<title>%s</title>\n", titlebuf);
-          fprintf(fout, "<text>\n%s\n</text>\n\n", textbuf);
+          fprintf(fout, "<text>%s</text>\n", textbuf);
           nmatch++;
         }
       } else {
@@ -78,7 +88,8 @@ static void run(const regex& re, FILE *fin, FILE *fout) {
 
 int main(int argc, char **argv) {
   if (argc != 4) {
-    fprintf(stderr, "Usage: %s <pattern> <infile> <outfile>", argv[0]);
+    fprintf(stderr, "Usage: %s <pattern> <infile> <outfile>\n", argv[0]);
+    return 1;
   }
   regex re(argv[1]);
   FILE *fin = fopen(argv[2], "r");
