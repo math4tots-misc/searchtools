@@ -3,8 +3,14 @@
 #include <stdio.h>
 using namespace std;
 
+// I tried just reading the entire thing into memory (~50GB),
+// and letting the OS's paging take care of things.
+// Didn't work out so great... took about ~8min20sec to find matches,
+// whereas, searching in chunks of 1GiB as done here takes only about
+// 1min20sec.
+
 constexpr size_t DEFAULT_CHUNK_SIZE = 1L << 30L; // GiB
-constexpr int DISPLAY_RADIUS = 300;
+constexpr int DISPLAY_RADIUS = 1000;
 constexpr int MATCH_FREQUENCY = 1000;
 
 static char buffer[DEFAULT_CHUNK_SIZE+1];
@@ -35,7 +41,7 @@ static void search(FILE *fin, char *pattern) {
     while (match) {
       curnmatch++;
       nmatch++;
-      switch(2) {
+      switch(0) {
         // Display every match, with everything DISPLAY_RADIUS around it.
         case 0: {
           displaymatch(match);
