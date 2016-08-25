@@ -5,6 +5,10 @@ START = raw/enwiki-latest-pages-articles.xml
 
 all:
 
+# Don't want to accidentally mess up, and have to rebuild.
+# Because building can be really slow.
+all2: prod/companies.xml
+
 prod/companies.xml: fwikigrep.out prod/filtered.xml $(START)
 	time ./fwikigrep.out \
 			"{{Infobox company" \
