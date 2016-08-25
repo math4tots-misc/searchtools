@@ -58,7 +58,6 @@ static void run(const char *pattern, FILE *fin, FILE *fout) {
     // if there is no <title> match for an entire GiB, there's no more
     // content.
     if (title_begin == nullptr) {
-      fprintf(stderr, "ntitles = %d\n", ntitles);
       break;
     }
     title_begin += 7;  // strlen("<title>")
@@ -77,7 +76,8 @@ static void run(const char *pattern, FILE *fin, FILE *fout) {
     }
     *text_end = '<';
   }
-  fprintf(stderr, "total: %d chunks (%d titles)\n", nchunk, ntitles);
+  fprintf(stderr, "total: %d matches in %d chunks (%d titles)\n",
+          nmatch, nchunk, ntitles);
 }
 
 int main(int argc, char **argv) {
