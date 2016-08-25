@@ -35,18 +35,6 @@ static char *linebuf;
 static char *titlebuf;
 static char *textbuf;
 
-static bool str_starts_with(const char *str, const char *prefix) {
-  return strncmp(str, prefix, strlen(prefix)) == 0;
-}
-
-static bool is_wikispecial(const char *title) {
-  return str_starts_with(title, "Wikipedia:") ||
-         str_starts_with(title, "Portal:") ||
-         str_starts_with(title, "Category:") ||
-         str_starts_with(title, "Template:") ||
-         str_starts_with(title, "Draft:");
-}
-
 static void run(const regex& re, FILE *fin, FILE *fout) {
   int state = STATE_TOP, nmatch = 0;
   char *p, *q, *textbufp;
@@ -59,15 +47,13 @@ static void run(const regex& re, FILE *fin, FILE *fout) {
         *q = '\0';
         strcpy(titlebuf, p);
       } else if ((p = strstr(linebuf, "<text"))) {
-        if (!is_wikispecial(titlebuf)) {
-          while (*p != '>') {
-            p++;
-          }
+        while (*p != '>') {
           p++;
-          strcpy(textbuf, p);
-          textbufp = textbuf + strlen(textbuf);
-          state = STATE_TEXT;
         }
+        p++;
+        strcpy(textbuf, p);
+        textbufp = textbuf + strlen(textbuf);
+        state = STATE_TEXT;
       }
     } else {
       if ((p = strstr(linebuf, "</text>"))) {
