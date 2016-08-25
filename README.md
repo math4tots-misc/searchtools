@@ -34,3 +34,10 @@ summaries/
 Hmm, so of all wikipedia pages about companies, there are only 3
 that mention 'flat organization'.
 
+
+## TODO
+
+### Remove special wikipedia namespace articles
+
+https://en.wikipedia.org/wiki/Wikipedia:Namespace
+

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define INBUF_SIZE (2L << 30)
 #define OUTBUF_SIZE (2L << 30)
@@ -19,18 +20,6 @@ static char inbuf[INBUF_SIZE];
 static constexpr char *inbufmid = inbuf + INBUF_SIZE/2;
 static constexpr char *inbufend = inbuf + INBUF_SIZE;
 static char *inbufp;
-
-static bool str_starts_with(const char *str, const char *prefix) {
-  return strncmp(str, prefix, strlen(prefix)) == 0;
-}
-
-static bool is_wikispecial(const char *title) {
-  return str_starts_with(title, "Wikipedia:") ||
-         str_starts_with(title, "Portal:") ||
-         str_starts_with(title, "Category:") ||
-         str_starts_with(title, "Template:") ||
-         str_starts_with(title, "Draft:");
-}
 
 static void shift(FILE *fin) {
   if (inbufp < inbufmid) {
@@ -72,8 +61,8 @@ static void run(const char *pattern, FILE *fin, FILE *fout) {
       fprintf(stderr, "ntitles = %d\n", ntitles);
       break;
     }
-    ntitles++;
     title_begin += 7;  // strlen("<title>")
+    ntitles++;
     // Assume '<title>' tags are always followed by '<text>' blocks.
     text_begin = strchr(strstr(title_begin, "<text"), '>') + 1;
     text_end = strchr(text_begin, '<');
@@ -81,11 +70,9 @@ static void run(const char *pattern, FILE *fin, FILE *fout) {
     if (strstr(text_begin, pattern)) {
       char *title_end = strchr(title_begin, '<');
       *title_end = '\0';
-      if (!is_wikispecial(title_begin)) {
-        fprintf(stderr, "match %10d: title = %s\n", nmatch++, title_begin);
-        fprintf(fout, "<title>%s</title>\n<text>%s</text>\n",
-                title_begin, text_begin);
-      }
+      fprintf(stderr, "match %10d: title = %s\n", nmatch++, title_begin);
+      fprintf(fout, "<title>%s</title>\n<text>%s</text>\n",
+              title_begin, text_begin);
       *title_end = '<';
     }
     *text_end = '<';
