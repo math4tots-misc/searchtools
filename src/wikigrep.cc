@@ -8,7 +8,9 @@
 // faster.
 
 /*
-g++ -O3 -Wall -Werror --std=c++11 -Wpedantic src/wikigrep.cc -o wikigrep && time ./wikigrep "\{\{Infobox company" summaries/filtered-articles.xml summaries/grep-companies.xml
+g++ -O3 -Wall -Werror --std=c++11 -Wpedantic src/wikigrep.cc -o wikigrep && \
+time ./wikigrep "\{\{Infobox company" \
+  summaries/filtered-articles.xml summaries/grep-companies.xml
 
 Finished in:
 real	56m55.061s
@@ -93,6 +95,10 @@ int main(int argc, char **argv) {
   }
   regex re(argv[1]);
   FILE *fin = fopen(argv[2], "r");
+  if (!fin) {
+    fprintf(stderr, "Could not open file '%s'\n", argv[2]);
+    return 1;
+  }
   setvbuf(fin, nullptr, _IOFBF, INBUF_SIZE);
   FILE *fout = fopen(argv[3], "w");
   setvbuf(fout, nullptr, _IOFBF, OUTBUF_SIZE);
