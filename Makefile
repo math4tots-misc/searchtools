@@ -7,7 +7,7 @@ all:
 
 # Don't want to accidentally mess up, and have to rebuild.
 # Because building can be really slow.
-all2: prod/companies.xml
+all2: prod/companies.xml wikigrep.out
 
 prod/companies.xml: fwikigrep.out prod/filtered.xml $(START)
 	time ./fwikigrep.out \
