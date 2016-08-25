@@ -7,6 +7,6 @@ all:
 wikigrep.out: src/wikigrep.cc
 	$(CXX) $(CXXFLAGS) -o wikigrep.out src/wikigrep.cc
 
-fastwikigrep.out: src/fastwikigrep.cc
-	$(CXX) $(CXXFLAGS) -o fastwikigrep.out src/fastwikigrep.cc
+fwikigrep.out: src/fwikigrep.cc
+	$(CXX) $(CXXFLAGS) -o fwikigrep.out src/fwikigrep.cc
 
