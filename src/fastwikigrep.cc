@@ -12,10 +12,10 @@ using namespace std;
 #define STATE_TOP 0
 #define STATE_TEXT 1
 
-static char *inbuf;
-static size_t inbuflen;
-static char *outbuf;
-static char *outbufp;
+static char inbuf[INBUF_SIZE];
+static constexpr char *inbufmid = inbuf + INBUF_SIZE/2;
+static constexpr char *inbufend = inbuf + INBUF_SIZE;
+static char *inbufp;
 
 static bool str_starts_with(const char *str, const char *prefix) {
   return strncmp(str, prefix, strlen(prefix)) == 0;
@@ -25,104 +25,73 @@ static bool is_wikispecial(const char *title) {
   return str_starts_with(title, "Wikipedia:") ||
          str_starts_with(title, "Portal:") ||
          str_starts_with(title, "Category:") ||
-         str_starts_with(title, "Template:");
+         str_starts_with(title, "Template:") ||
+         str_starts_with(title, "Draft:");
 }
 
 static void shift(FILE *fin) {
-  if (inbuflen < INBUF_SIZE/2) {
-    inbuflen = 0;
-    inbuf[0] = '\0';
+  if (inbufp < inbufmid) {
+    inbufp = inbuf;
+    *inbufp = '\0';
     return;
   }
-  if (inbuflen < INBUF_SIZE) {
-    inbuflen -= INBUF_SIZE/2;
-    memcpy(inbuf, inbuf + INBUF_SIZE/2, inbuflen);
-    inbuf[inbuflen] = '\0';
+  if (inbufp < inbufend) {
+    inbufp -= INBUF_SIZE/2;
+    memcpy(inbuf, inbuf + INBUF_SIZE/2, inbufp - inbuf);
+    *inbufp = '\0';
     return;
   }
   memcpy(inbuf, inbuf + INBUF_SIZE/2, INBUF_SIZE/2);
-  inbuflen = INBUF_SIZE/2 + fread(inbuf + INBUF_SIZE/2, 1, INBUF_SIZE/2, fin);
-  inbuf[inbuflen] = '\0';
-}
-
-static void flush(FILE *fout) {
-  fwrite(outbuf, 1, outbufp - outbuf, fout);
-  outbufp = outbuf;
+  inbufp = inbufmid + fread(inbuf + INBUF_SIZE/2, 1, INBUF_SIZE/2, fin);
+  *inbufp = '\0';
 }
 
 static void run(const regex& re, FILE *fin, FILE *fout) {
-  const char *p;
-  int nmatch = 0;
-  int nshift = 0;
+  inbufp = inbuf + fread(inbuf, 1, INBUF_SIZE, fin);
+  *inbufp = '\0';
+  int nchunk = 0, nmatch = 0;
+  char *p = inbuf, *title_begin, *text_begin;
+  fprintf(stderr, "nchunk = %d\n", nchunk++);
 
-  inbuflen = fread(inbuf, 1, INBUF_SIZE, fin);
-  inbuf[inbuflen] = '\0';
-
-  outbufp = outbuf;
-
-  p = inbuf;
-
-  while (1) {
-    // We assume no article is so big that they are ever going to
-    // be bigger than INBUF_SIZE/2. So as long as we find
-    // that the 'title' part of the string starts before
-    // inbuf + INBUF_SIZE/2, we'll assume that all of the rest of
-    // the article is in the buffer.
+  while (true) {
     p = strstr(p, "<title>");
-    if (p && p >= inbuf + INBUF_SIZE/2) {
-      fprintf(stderr, "Shift %d\n", nshift);
-      nshift++;
+    if (p > inbufmid) {
+      fprintf(stderr, "nchunk = %d\n", nchunk++);
       shift(fin);
       p = strstr(inbuf, "<title>");
     }
-
-    if (!p) {
+    if (p == nullptr) {
       break;
     }
-
-    if (is_wikispecial(p)) {
-      continue;
-    }
-
-    p += 7;  // strlen("<title>");
-    const char *const begin_title = p;
-    const char *const end_title = strstr(p, "</title>");
-
-    p = strstr(p, "<text ");
-    while (*p != '>') {
-      p++;
-    }
-    p++;
-    const char *const begin_text = p;
-    const char *const end_text = strstr(p, "</text>");
-
-    if (regex_search(begin_text, end_text, re)) {
-      fprintf(stderr, "match %10d: title = %.*s\n",
-              nmatch,
-              static_cast<int>(end_title - begin_title), begin_title);
-
-      // write out <title>...</title>
-      memcpy(outbufp, "<title>", 7 /*strlen("<title>")*/);
-      outbufp += 7;  // strlen("<title>")
-      memcpy(outbufp, begin_title, end_title - begin_title);
-      outbufp += end_title - begin_title;
-      memcpy(outbufp, "</title>", 8 /*strlen("</title>")*/);
-      outbufp += 8;  // strlen("</title>")
-      // write out <text>...</text>
-      memcpy(outbufp, "<text>", 6 /*strlen("<text>")*/);
-      outbufp += 6;  // strlen("<text>")
-      memcpy(outbufp, begin_text, end_text - begin_text);
-      outbufp += end_text - begin_text;
-      memcpy(outbufp, "</text>", 7 /*strlen("</text>")*/);
-      outbufp += 7;  // strlen("</text>")
-
-      if (outbufp > outbuf + OUTBUF_SIZE/2) {
-        flush(fout);
+    title_begin = p + 7;  // strlen("<title>");
+    p = strstr(p, "<text ") + 6;  // strlen("<text ");
+    text_begin = strchr(p, '>') + 1;
+    p = strchr(p, '<');
+    if (regex_search(text_begin, p, re)) {
+      // NOTE: is_wikispecial doesn't really filter out that many entries,
+      // and is a relatively expensive operation.
+      // Furthermore, generally there are relatively few articles that
+      // match the regex search.
+      // Putting is_wikispecial in here seems to actually save time
+      if (is_wikispecial(title_begin)) {
+        continue;
       }
-
-      nmatch++;
+      char *const title_end = strchr(title_begin, '<');
+      const int title_len = title_end - title_begin;
+      const int text_len = p - text_begin;
+      fprintf(fout, "<title>%.*s</title><text>%.*s</text>",
+              title_len, title_begin, text_len, text_begin);
+      fprintf(stderr, "match %10d: title = %.*s\n",
+              nmatch++, title_len, title_begin);
     }
   }
+
+  //// potential alternative way to approach this.
+  // match_results<char*> m;
+  // while (p < inbufend && regex_search(p, inbufend, m, re)) {
+  //   fprintf(stderr, "match = %d\n", nmatch++);
+  //   p = m[0].second;
+  // }
 }
 
 int main(int argc, char **argv) {
@@ -130,11 +99,16 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s <pattern> <infile> <outfile>\n", argv[0]);
     return 1;
   }
+  fprintf(stderr, "pattern = %s\ninfile = %s\noutfile = %s\n",
+          argv[1], argv[2], argv[3]);
   regex re(argv[1]);
   FILE *fin = fopen(argv[2], "r");
+  if (!fin) {
+    fprintf(stderr, "Could not open file '%s'\n", argv[2]);
+    return 1;
+  }
   FILE *fout = fopen(argv[3], "w");
-  inbuf = static_cast<char*>(malloc(INBUF_SIZE+1));
-  outbuf = static_cast<char*>(malloc(OUTBUF_SIZE+1));
+  setvbuf(fout, nullptr, _IOFBF, OUTBUF_SIZE);
   run(re, fin, fout);
 }
 
