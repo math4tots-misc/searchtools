@@ -14,9 +14,13 @@ files.
 Files and directories expected to be available, but not included
 
 raw/enwiki-latest-pages-articles.xml
-summaries/
+  wikipedia data dump
 
-
+raw/crunchbase/acquisitions.csv
+raw/crunchbase/companies.csv
+raw/crunchbase/investments.csv
+raw/crunchbase/rounds.csv
+  from https://github.com/notpeter/crunchbase-data
 
 ## Interesting results
 

@@ -3,3 +3,6 @@ raw
 prod
 *.out
 *.xml
+
+.DS_Store
+__pycache__
